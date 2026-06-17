@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.image }}
+    strategy:
+      matrix:
+        platform:
+          - os: linux
+            image: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: ipscan
+            archive: ipscan-linux-amd64.tar.gz
+          - os: macos
+            image: macos-latest
+            target: x86_64-apple-darwin
+            bin: ipscan
+            archive: ipscan-macos-amd64.tar.gz
+          - os: windows
+            image: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: ipscan.exe
+            archive: ipscan-windows-amd64.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.platform.target }}
+
+      - name: Package binary (Windows)
+        if: matrix.platform.os == 'windows'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          Compress-Archive -Path ${{ matrix.platform.bin }} -DestinationPath ../../../${{ matrix.platform.archive }}
+
+      - name: Package binary (Linux/macOS)
+        if: matrix.platform.os != 'windows'
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          tar -czf ../../../${{ matrix.platform.archive }} ${{ matrix.platform.bin }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.archive }}
+          path: ${{ matrix.platform.archive }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true

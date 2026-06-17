@@ -1,0 +1,19 @@
+[package]
+name = "ipscan"
+version = "0.1.0"
+edition = "2024"
+description = "A high-performance, asynchronous IP and Port scanner in Rust supporting concurrent TCP scans, single-socket UDP scans, and custom hex payload injection."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/your-username/ipscan"
+keywords = ["ip", "port", "scanner", "udp", "tcp"]
+categories = ["command-line-utilities", "network-programming"]
+
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+ipnet = "2.9"
+indicatif = "0.17"
+anyhow = "1.0"
+socket2 = "0.5"
+clap = { version = "4", features = ["derive"] }
