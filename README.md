@@ -1,5 +1,6 @@
 # 🚀 ipscan
 
+[![GitHub Actions Build Status](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml)
 [![Crates.io Version](https://img.shields.io/crates/v/ipscan.svg?style=flat-square&color=orange)](https://crates.io/crates/ipscan)
 [![Crates.io Downloads](https://img.shields.io/crates/d/ipscan.svg?style=flat-square&color=green)](https://crates.io/crates/ipscan)
 [![License](https://img.shields.io/crates/l/ipscan.svg?style=flat-square&color=blue)](https://crates.io/crates/ipscan)
