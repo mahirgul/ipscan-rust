@@ -1,6 +1,6 @@
 [package]
 name = "ipscan"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A high-performance, asynchronous IP and Port scanner in Rust supporting concurrent TCP scans, single-socket UDP scans, and custom hex payload injection."
 license = "MIT"

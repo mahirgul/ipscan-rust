@@ -89,3 +89,10 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+
+      - name: Install Rust toolchain (for crates.io publishing)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish package to crates.io
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }} --allow-dirty
+

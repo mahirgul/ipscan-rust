@@ -1,14 +1,14 @@
-use std::net::IpAddr;
-use std::net::SocketAddr;
-use std::time::Duration;
-use std::io::{self, Write};
-use std::fs::File;
-use std::sync::Arc;
-use tokio::time::timeout;
-use tokio::sync::Semaphore;
+use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use ipnet::IpNet;
-use clap::Parser;
+use std::fs::File;
+use std::io::{self, Write};
+use std::net::IpAddr;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Semaphore;
+use tokio::time::timeout;
 
 /// IP and Port Scanner - Rust High-Performance Tool
 #[derive(Parser, Debug)]
@@ -88,7 +88,9 @@ async fn main() -> anyhow::Result<()> {
         if proto == "TCP" || proto == "UDP" {
             proto
         } else {
-            println!("\x1b[1;31mError: CLI protocol must be TCP or UDP. Falling back to interactive.\x1b[0m");
+            println!(
+                "\x1b[1;31mError: CLI protocol must be TCP or UDP. Falling back to interactive.\x1b[0m"
+            );
             prompt_protocol()
         }
     } else {
@@ -100,7 +102,9 @@ async fn main() -> anyhow::Result<()> {
         if port_arg > 0 {
             port_arg
         } else {
-            println!("\x1b[1;31mError: CLI port must be 1-65535. Falling back to interactive.\x1b[0m");
+            println!(
+                "\x1b[1;31mError: CLI port must be 1-65535. Falling back to interactive.\x1b[0m"
+            );
             prompt_port()
         }
     } else {
@@ -111,19 +115,15 @@ async fn main() -> anyhow::Result<()> {
     let source_port = args.source_port.unwrap_or(0);
 
     // Load or prompt for timeout
-    let timeout_ms = args.timeout.unwrap_or_else(|| {
-        prompt_timeout()
-    });
+    let timeout_ms = args.timeout.unwrap_or_else(prompt_timeout);
 
     // Load or prompt for concurrency
-    let concurrency = args.concurrency.unwrap_or_else(|| {
-        prompt_concurrency()
-    });
+    let concurrency = args.concurrency.unwrap_or_else(prompt_concurrency);
 
     // Load or prompt for output file
-    let output_file = args.output.unwrap_or_else(|| {
-        read_input("Enter output text file path", Some("results.txt"))
-    });
+    let output_file = args
+        .output
+        .unwrap_or_else(|| read_input("Enter output text file path", Some("results.txt")));
 
     // Load UDP payload from hex argument or --nec flag.
     // If --nec is enabled, we use a template payload where the last 4 bytes will be replaced
@@ -218,7 +218,9 @@ async fn main() -> anyhow::Result<()> {
             timeout_ms,
             concurrency,
             pb.clone(),
-        ).await {
+        )
+        .await
+        {
             Ok(ips) => active_ips = ips,
             Err(e) => {
                 println!("\x1b[1;31mError during UDP scan: {}\x1b[0m", e);
@@ -233,7 +235,12 @@ async fn main() -> anyhow::Result<()> {
 
     println!();
     println!("\x1b[1;32m[+] Scan Finished!\x1b[0m");
-    println!("    - Found {} active device(s) listening on port {} ({})", active_ips.len(), port, protocol);
+    println!(
+        "    - Found {} active device(s) listening on port {} ({})",
+        active_ips.len(),
+        port,
+        protocol
+    );
     println!();
 
     if !active_ips.is_empty() {
@@ -248,9 +255,15 @@ async fn main() -> anyhow::Result<()> {
         for ip in &active_ips {
             writeln!(file, "{}", ip)?;
         }
-        println!("\x1b[1;32m[+] Results successfully saved to: {}\x1b[0m", output_file);
+        println!(
+            "\x1b[1;32m[+] Results successfully saved to: {}\x1b[0m",
+            output_file
+        );
     } else {
-        println!("\x1b[1;33m[-] No active devices were found listening on port {}.\x1b[0m", port);
+        println!(
+            "\x1b[1;33m[-] No active devices were found listening on port {}.\x1b[0m",
+            port
+        );
     }
 
     Ok(())
@@ -263,12 +276,12 @@ fn read_input(prompt: &str, default: Option<&str>) -> String {
         print!("{}: ", prompt);
     }
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     let trimmed = input.trim().to_string();
-    if trimmed.is_empty() && default.is_some() {
-        default.unwrap().to_string()
+    if trimmed.is_empty() {
+        default.unwrap_or("").to_string()
     } else {
         trimmed
     }
@@ -276,44 +289,45 @@ fn read_input(prompt: &str, default: Option<&str>) -> String {
 
 async fn check_ip_port(ip: IpAddr, port: u16, source_port: u16, timeout_dur: Duration) -> bool {
     let addr = SocketAddr::new(ip, port);
-    
+
     // Create socket based on IP version
     let domain = match ip {
         IpAddr::V4(_) => socket2::Domain::IPV4,
         IpAddr::V6(_) => socket2::Domain::IPV6,
     };
-    
-    let socket = match socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP)) {
-        Ok(s) => s,
-        Err(_) => return false,
-    };
-    
+
+    let socket =
+        match socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP)) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
     // Bind to the specified local source port if defined
     let local_addr = match ip {
         IpAddr::V4(_) => SocketAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), source_port),
         IpAddr::V6(_) => SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), source_port),
     };
-    
+
     // reuse_address can help with address-already-in-use errors when using fixed source ports rapidly
     let _ = socket.set_reuse_address(true);
-    
+
     if socket.bind(&local_addr.into()).is_err() {
         return false;
     }
-    
+
     if socket.set_nonblocking(true).is_err() {
         return false;
     }
-    
+
     // Initiate non-blocking connection via socket2
     let _ = socket.connect(&addr.into());
-    
+
     let std_socket: std::net::TcpStream = socket.into();
     let tokio_socket = match tokio::net::TcpStream::from_std(std_socket) {
         Ok(s) => s,
         Err(_) => return false,
     };
-    
+
     match timeout(timeout_dur, tokio_socket.writable()).await {
         Ok(Ok(())) => {
             // Once writable, check if peer_addr is Ok to confirm connection success
@@ -323,6 +337,15 @@ async fn check_ip_port(ip: IpAddr, port: u16, source_port: u16, timeout_dur: Dur
     }
 }
 
+fn get_routing_ip(target_addr: SocketAddr) -> Option<IpAddr> {
+    let bind_addr = if target_addr.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
+    let temp_socket = std::net::UdpSocket::bind(bind_addr).ok()?;
+    temp_socket.connect(target_addr).ok()?;
+    let local_addr = temp_socket.local_addr().ok()?;
+    Some(local_addr.ip())
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn scan_udp_single_socket(
     ip_list: Vec<IpAddr>,
     port: u16,
@@ -336,17 +359,21 @@ async fn scan_udp_single_socket(
     use std::collections::HashSet;
     use tokio::sync::Mutex;
 
-    let is_ipv6 = ip_list.first().map_or(false, |ip| ip.is_ipv6());
+    let is_ipv6 = ip_list.first().is_some_and(|ip| ip.is_ipv6());
     let local_addr = if is_ipv6 {
         SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), source_port)
     } else {
         SocketAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), source_port)
     };
 
-    let domain = if is_ipv6 { socket2::Domain::IPV6 } else { socket2::Domain::IPV4 };
+    let domain = if is_ipv6 {
+        socket2::Domain::IPV6
+    } else {
+        socket2::Domain::IPV4
+    };
     let socket = socket2::Socket::new(domain, socket2::Type::DGRAM, Some(socket2::Protocol::UDP))?;
     let _ = socket.set_reuse_address(true);
-    
+
     socket.bind(&local_addr.into())?;
     socket.set_nonblocking(true)?;
 
@@ -370,7 +397,9 @@ async fn scan_udp_single_socket(
                 Err(e) => {
                     // ConnectionReset (WSAECONNRESET) is very common on Windows when sending to closed UDP ports.
                     // We must ignore it and continue listening.
-                    if e.kind() == std::io::ErrorKind::ConnectionReset || e.kind() == std::io::ErrorKind::ConnectionRefused {
+                    if e.kind() == std::io::ErrorKind::ConnectionReset
+                        || e.kind() == std::io::ErrorKind::ConnectionRefused
+                    {
                         continue;
                     }
                     // For other errors, yield briefly to avoid 100% CPU usage if the socket enters a bad state
@@ -396,21 +425,11 @@ async fn scan_udp_single_socket(
 
             let mut final_payload = payload_clone;
             if is_nec && final_payload.len() >= 12 {
-                // Determine local routing IP using a quick, temporary UDP connection
-                let bind_addr = if target_addr.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
-                if let Ok(temp_socket) = std::net::UdpSocket::bind(bind_addr) {
-                    if temp_socket.connect(target_addr).is_ok() {
-                        if let Ok(local_addr) = temp_socket.local_addr() {
-                            if let IpAddr::V4(ipv4) = local_addr.ip() {
-                                let octets = ipv4.octets();
-                                let len = final_payload.len();
-                                final_payload[len - 4] = octets[0];
-                                final_payload[len - 3] = octets[1];
-                                final_payload[len - 2] = octets[2];
-                                final_payload[len - 1] = octets[3];
-                            }
-                        }
-                    }
+                let routing_ip = get_routing_ip(target_addr);
+                if let Some(IpAddr::V4(ipv4)) = routing_ip {
+                    let octets = ipv4.octets();
+                    let len = final_payload.len();
+                    final_payload[len - 4..=len - 1].copy_from_slice(&octets);
                 }
             }
 
@@ -435,25 +454,30 @@ async fn scan_udp_single_socket(
 
     listener_handle.abort();
 
-    let final_ips = active_ips.lock().await.iter().cloned().collect::<Vec<IpAddr>>();
+    let final_ips = active_ips
+        .lock()
+        .await
+        .iter()
+        .cloned()
+        .collect::<Vec<IpAddr>>();
     Ok(final_ips)
 }
 
 fn parse_ip_range(input: &str) -> anyhow::Result<Vec<IpAddr>> {
     let input = input.trim();
-    
+
     // 1. Try parsing as CIDR (e.g., 192.168.1.0/24)
     if let Ok(net) = input.parse::<IpNet>() {
         return Ok(net.hosts().collect());
     }
-    
+
     // 2. Try parsing as IP range with dash (e.g., 192.168.1.1-192.168.1.100 or 192.168.1.1-100)
     if input.contains('-') {
         let parts: Vec<&str> = input.split('-').map(|s| s.trim()).collect();
         if parts.len() == 2 {
             let start_ip_str = parts[0];
             let end_ip_str = parts[1];
-            
+
             if let Ok(start_ip) = start_ip_str.parse::<IpAddr>() {
                 if let Ok(end_ip) = end_ip_str.parse::<IpAddr>() {
                     // Start and end are fully qualified IPs (e.g., 192.168.1.1-192.168.1.100)
@@ -465,24 +489,32 @@ fn parse_ip_range(input: &str) -> anyhow::Result<Vec<IpAddr>> {
                         if end_octet >= octets[3] {
                             let mut ips = Vec::new();
                             for o3 in octets[3]..=end_octet {
-                                ips.push(IpAddr::V4(std::net::Ipv4Addr::new(octets[0], octets[1], octets[2], o3)));
+                                ips.push(IpAddr::V4(std::net::Ipv4Addr::new(
+                                    octets[0], octets[1], octets[2], o3,
+                                )));
                             }
                             return Ok(ips);
                         } else {
-                            anyhow::bail!("End octet ({}) must be greater than or equal to start octet ({})", end_octet, octets[3]);
+                            anyhow::bail!(
+                                "End octet ({}) must be greater than or equal to start octet ({})",
+                                end_octet,
+                                octets[3]
+                            );
                         }
                     }
                 }
             }
         }
     }
-    
+
     // 3. Try parsing as a single IP address
     if let Ok(ip) = input.parse::<IpAddr>() {
         return Ok(vec![ip]);
     }
-    
-    anyhow::bail!("Invalid IP format. Supported options: single IP (e.g., 192.168.1.1), CIDR (e.g., 192.168.1.0/24), IP range (e.g., 192.168.1.1-50 or 192.168.1.1-192.168.1.50)")
+
+    anyhow::bail!(
+        "Invalid IP format. Supported options: single IP (e.g., 192.168.1.1), CIDR (e.g., 192.168.1.0/24), IP range (e.g., 192.168.1.1-50 or 192.168.1.1-192.168.1.50)"
+    )
 }
 
 fn ip_range_between(start: IpAddr, end: IpAddr) -> anyhow::Result<Vec<IpAddr>> {
@@ -520,7 +552,10 @@ fn ip_range_between(start: IpAddr, end: IpAddr) -> anyhow::Result<Vec<IpAddr>> {
 
 fn prompt_ip_list() -> Vec<IpAddr> {
     loop {
-        let ip_input = read_input("Enter IP, CIDR, or Range (e.g. 192.168.1.0/24, 192.168.1.1-50)", None);
+        let ip_input = read_input(
+            "Enter IP, CIDR, or Range (e.g. 192.168.1.0/24, 192.168.1.1-50)",
+            None,
+        );
         if ip_input.is_empty() {
             println!("\x1b[1;31mError: Input cannot be empty.\x1b[0m");
             continue;
@@ -572,7 +607,10 @@ fn prompt_timeout() -> u64 {
 
 fn prompt_concurrency() -> usize {
     loop {
-        let concurrency_input = read_input("Enter max concurrency (simultaneous connections)", Some("200"));
+        let concurrency_input = read_input(
+            "Enter max concurrency (simultaneous connections)",
+            Some("200"),
+        );
         match concurrency_input.parse::<usize>() {
             Ok(c) if c > 0 => break c,
             _ => println!("\x1b[1;31mError: Please enter a valid concurrency number.\x1b[0m"),
@@ -582,7 +620,7 @@ fn prompt_concurrency() -> usize {
 
 fn parse_hex(hex: &str) -> Option<Vec<u8>> {
     let clean_hex: String = hex.chars().filter(|c| !c.is_whitespace()).collect();
-    if clean_hex.len() % 2 != 0 {
+    if !clean_hex.len().is_multiple_of(2) {
         return None;
     }
     let mut bytes = Vec::with_capacity(clean_hex.len() / 2);

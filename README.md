@@ -1,23 +1,36 @@
-# ipscan
+# 🚀 ipscan
 
-A high-performance, asynchronous IP and Port Scanner written in Rust, designed for both TCP and UDP port scanning with advanced networking features.
+[![Crates.io Version](https://img.shields.io/crates/v/ipscan.svg?style=flat-square&color=orange)](https://crates.io/crates/ipscan)
+[![Crates.io Downloads](https://img.shields.io/crates/d/ipscan.svg?style=flat-square&color=green)](https://crates.io/crates/ipscan)
+[![License](https://img.shields.io/crates/l/ipscan.svg?style=flat-square&color=blue)](https://crates.io/crates/ipscan)
+[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgray.svg?style=flat-square)](#)
 
-## Features
-
-- **Asynchronous TCP Scanning**: Conducts concurrent 3-way handshake checks across target IP ranges using Tokio's thread pool.
-- **Single-Socket UDP Scanning**: Employs a high-performance single-socket listener/sender architecture to scan thousands of UDP targets concurrently without local port binding conflicts (`AddrInUse`).
-- **Dynamic IP Payload Injection (NEC Mode)**: Automatically detects the local routing IP address and dynamically injects it into the UDP payload (useful for custom device discovery protocols like NEC where the device replies to the IP specified inside the payload).
-- **Custom Hex Payload Support**: Allows sending any custom hex-encoded payload for UDP discovery.
-- **Local Source Port Binding**: Supports binding outbound scan traffic to a specific local source port (e.g., `-s 20111` or `-s 53`).
-- **Graceful Shutdown (`Ctrl+C`)**: Captures interrupts, immediately halts active scans, sorts discovered active IPs, and saves them to the output file before exiting.
-- **Multiple IP Formats**: Supports single IPs, ranges (e.g., `192.168.1.1-50`), and CIDR blocks (e.g., `192.168.1.0/24`).
+A high-performance, asynchronous IP and Port Scanner written in Rust. Designed for fast network discovery using concurrent TCP checks and conflict-free single-socket UDP probing with dynamic client IP injection.
 
 ---
 
-## Installation & Build
+## ✨ Features
 
-Ensure you have [Rust and Cargo](https://rustup.rs/) installed.
+- **⚡ Asynchronous TCP Scanning**: High-speed, concurrent 3-way handshake checking using Tokio's work-stealing thread pool.
+- **📡 Single-Socket UDP Scanning**: Probes thousands of UDP targets concurrently using a single local port socket, completely avoiding `AddrInUse` (Address already in use) conflicts.
+- **🏷️ Dynamic IP Injection (NEC Mode)**: Automatically detects the scanning machine's routing IP and dynamically patches it into the UDP packet payload (solving destination routing issues for device discovery).
+- **🔧 Local Source Port Binding**: Allows outgoing traffic to originate from a fixed port of your choice (e.g. `-s 20111` or `-s 53` for DNS traversal).
+- **📥 Custom UDP Payloads**: Send arbitrary hex-encoded packets to match custom services.
+- **⏹️ Graceful Interrupt Handling**: Pressing `Ctrl+C` instantly interrupts the scan, compiles results collected up to that moment, writes them sorted to the output file, and exits cleanly.
+- **🎯 Multiple Range Formats**: Supports single IPs, numeric ranges (`192.168.1.1-100`), and CIDR notations (`192.168.1.0/24`).
 
+---
+
+## 📦 Installation & Setup
+
+You can install `ipscan` directly from **crates.io** or build it from source.
+
+### Option A: Install from Crates.io (Recommended)
+```bash
+cargo install ipscan
+```
+
+### Option B: Build from Source
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/ipscan.git
@@ -26,19 +39,18 @@ cd ipscan
 # Build optimized release binary
 cargo build --release
 ```
-
-The compiled binary will be available at `./target/release/ipscan` (or `ipscan.exe` on Windows).
+The compiled binary will be placed in `./target/release/ipscan` (or `ipscan.exe` on Windows).
 
 ---
 
-## Usage Examples
+## 🛠️ Command-Line Interface
 
-Run without parameters to fall back to interactive prompting mode:
+Run the binary without parameters to fall back to the interactive mode:
 ```bash
-./ipscan
+ipscan
 ```
 
-### Command-Line Arguments
+### Options Guide
 
 | Flag | Long Flag | Description | Default |
 | :--- | :--- | :--- | :--- |
@@ -46,7 +58,7 @@ Run without parameters to fall back to interactive prompting mode:
 | `-P` | `--protocol` | Protocol to scan (`TCP` or `UDP`) | *Prompted if omitted* |
 | `-p` | `--port` | Target port number (1-65535) | *Prompted if omitted* |
 | `-s` | `--source-port` | Outgoing local source port (0 for random OS-allocated) | `0` |
-| `-t` | `--timeout` | Socket connection timeout in milliseconds | `1000` |
+| `-t` | `--timeout` | Connection timeout in milliseconds | `1000` |
 | `-c` | `--concurrency` | Maximum simultaneous connections / packets | `200` |
 | `-o` | `--output` | Output text file path for saving active IP addresses | `results.txt` |
 | `-d` | `--data` | Custom hex-encoded payload to send for UDP scans | `""` |
@@ -54,38 +66,37 @@ Run without parameters to fall back to interactive prompting mode:
 
 ---
 
-### Examples
+## 💡 Practical Examples
 
-#### 1. NEC UDP Discovery Scan
-Scan a Class C subnet on port `3530` using the local source port `20111` in NEC mode with a 2-second timeout:
+### 1. NEC UDP Discovery Scan
+Scan a Class C subnet on port `3530` using the local source port `20111` with a 2-second timeout:
 ```bash
-./ipscan -i 10.9.6.0/24 -P UDP -p 3530 -s 20111 --nec -t 2000
+ipscan -i 10.9.6.0/24 -P UDP -p 3530 -s 20111 --nec -t 2000
 ```
-*In this mode, the program automatically binds to local port `20111`, discovers the correct outgoing IP, writes it into the 12-byte payload `01 01 00 08 00 01 00 8f [Your-IP]`, sends it to all targets, and logs devices that reply.*
+*This binds to local port `20111`, queries the local routing table, dynamically injects your host IP into the last 4 bytes of the payload, sends it to all targets, and listens for replies.*
 
-#### 2. Fast TCP Port Scan
+### 2. High-Speed TCP Port Scan
 Scan a range of IPs on port `80` with a concurrency limit of `500` and a fast `200ms` timeout:
 ```bash
-./ipscan -i 192.168.1.1-150 -P TCP -p 80 -c 500 -t 200 -o web_servers.txt
+ipscan -i 192.168.1.1-150 -P TCP -p 80 -c 500 -t 200 -o web_servers.txt
 ```
 
-#### 3. Custom UDP Payload Scan
-Send a custom hex payload (e.g. `AABBCCDD`) to port `5000`:
+### 3. Custom UDP Payload Scan
+Send a custom hex payload (`AABBCCDD`) to port `5000`:
 ```bash
-./ipscan -i 192.168.1.0/24 -P UDP -p 5000 -d "AA BB CC DD"
+ipscan -i 192.168.1.0/24 -P UDP -p 5000 -d "AA BB CC DD"
 ```
 
 ---
 
-## Multi-Platform Releases (GitHub Actions)
+## 🤖 CI/CD Release Automation
 
-This repository includes a GitHub Actions CI workflow to compile and release the application for multiple platforms:
+The repository includes a GitHub Actions CI workflow in `.github/workflows/release.yml` that builds and packages binaries for:
 - **Windows** (`x86_64-pc-windows-msvc`)
 - **Linux** (`x86_64-unknown-linux-gnu`)
 - **macOS** (`x86_64-apple-darwin` / Apple Silicon)
 
-To trigger a release:
-1. Create a new tag: `git tag v1.0.0`
+### How to trigger a release:
+1. Tag your commit: `git tag v1.0.0`
 2. Push the tag: `git push origin v1.0.0`
-
-GitHub Actions will automatically build the binaries, package them in `.zip` / `.tar.gz` files, and attach them to a new GitHub Release.
+3. GitHub Actions will compile the binaries, upload them to a new GitHub Release, and automatically publish the updated crate to `crates.io`. (Make sure you configure `CRATES_IO_TOKEN` in your repository secrets!).
