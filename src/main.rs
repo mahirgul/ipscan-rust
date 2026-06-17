@@ -338,7 +338,11 @@ async fn check_ip_port(ip: IpAddr, port: u16, source_port: u16, timeout_dur: Dur
 }
 
 fn get_routing_ip(target_addr: SocketAddr) -> Option<IpAddr> {
-    let bind_addr = if target_addr.is_ipv4() { "0.0.0.0:0" } else { "[::]:0" };
+    let bind_addr = if target_addr.is_ipv4() {
+        "0.0.0.0:0"
+    } else {
+        "[::]:0"
+    };
     let temp_socket = std::net::UdpSocket::bind(bind_addr).ok()?;
     temp_socket.connect(target_addr).ok()?;
     let local_addr = temp_socket.local_addr().ok()?;

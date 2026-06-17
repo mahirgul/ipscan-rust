@@ -1,9 +1,9 @@
 # 🚀 ipscan
 
-[![GitHub Actions Build Status](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml)
-[![Crates.io Version](https://img.shields.io/crates/v/ipscan.svg?style=flat-square&color=orange)](https://crates.io/crates/ipscan)
-[![Crates.io Downloads](https://img.shields.io/crates/d/ipscan.svg?style=flat-square&color=green)](https://crates.io/crates/ipscan)
-[![License](https://img.shields.io/crates/l/ipscan.svg?style=flat-square&color=blue)](https://crates.io/crates/ipscan)
+[![GitHub Actions Build Status](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml/badge.svg)](https://github.com/mahirgul/ipscan-rust/actions/workflows/release.yml)
+[![Crates.io Version](https://img.shields.io/crates/v/ipscan?style=flat-square&color=orange)](https://crates.io/crates/ipscan)
+[![Crates.io Downloads](https://img.shields.io/crates/d/ipscan?style=flat-square&color=green)](https://crates.io/crates/ipscan)
+[![License](https://img.shields.io/crates/l/ipscan?style=flat-square&color=blue)](https://crates.io/crates/ipscan)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgray.svg?style=flat-square)](#)
 
 A high-performance, asynchronous IP and Port Scanner written in Rust. Designed for fast network discovery using concurrent TCP checks and conflict-free single-socket UDP probing with dynamic client IP injection.
@@ -34,8 +34,8 @@ cargo install ipscan
 ### Option B: Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ipscan.git
-cd ipscan
+git clone https://github.com/mahirgul/ipscan-rust.git
+cd ipscan-rust
 
 # Build optimized release binary
 cargo build --release
