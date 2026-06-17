@@ -18,7 +18,7 @@ A high-performance, asynchronous IP and Port Scanner written in Rust. Designed f
 - **🔧 Local Source Port Binding**: Allows outgoing traffic to originate from a fixed port of your choice (e.g. `-s 20111` or `-s 53` for DNS traversal).
 - **📥 Custom UDP Payloads**: Send arbitrary hex-encoded packets to match custom services.
 - **⏹️ Graceful Interrupt Handling**: Pressing `Ctrl+C` instantly interrupts the scan, compiles results collected up to that moment, writes them sorted to the output file, and exits cleanly.
-- **🎯 Multiple Range Formats**: Supports single IPs, numeric ranges (`192.168.1.1-100`), and CIDR notations (`192.168.1.0/24`).
+- **🎯 Flexible Target Resolution**: Supports single IPs, numeric ranges (`192.168.1.1-100`), CIDR notations (`192.168.1.0/24`), and hostnames/domains (e.g., `localhost`, `example.com`).
 
 ---
 
@@ -55,7 +55,7 @@ ipscan
 
 | Flag | Long Flag | Description | Default |
 | :--- | :--- | :--- | :--- |
-| `-i` | `--ip` | Target IP, CIDR block, or range (e.g., `10.9.6.0/24`, `192.168.1.1-100`) | *Prompted if omitted* |
+| `-i` | `--ip` | Target IP, CIDR block, range, or hostname (e.g., `10.9.6.0/24`, `example.com`) | *Prompted if omitted* |
 | `-P` | `--protocol` | Protocol to scan (`TCP` or `UDP`) | *Prompted if omitted* |
 | `-p` | `--port` | Target port number (1-65535) | *Prompted if omitted* |
 | `-s` | `--source-port` | Outgoing local source port (0 for random OS-allocated) | `0` |
@@ -86,6 +86,12 @@ ipscan -i 192.168.1.1-150 -P TCP -p 80 -c 500 -t 200 -o web_servers.txt
 Send a custom hex payload (`AABBCCDD`) to port `5000`:
 ```bash
 ipscan -i 192.168.1.0/24 -P UDP -p 5000 -d "AA BB CC DD"
+```
+
+### 4. Scan a Domain/Hostname
+Resolve a domain's IP addresses and scan port 443:
+```bash
+ipscan -i example.com -P TCP -p 443
 ```
 
 ---
